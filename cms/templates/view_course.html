@@ -130,19 +130,19 @@
       </div>
       <div class="modal-body">
         <form enctype="multipart/form-data" method="POST">
-          {{form.hidden_tag()}}
+          {{courseNoteForm.hidden_tag()}}
         
         
           <div class="form-group">
-            {{form.title.label(class='form-group')}}
-            {{form.title(class='form-control')}}
+            {{courseNoteForm.title.label(class='form-group')}}
+            {{courseNoteForm.title(class='form-control')}}
           </div>
           <div class="form-group">
-            {{form.details.label(class='form-group')}}
-            {{form.details(class='form-control')}}
+            {{courseNoteForm.details.label(class='form-group')}}
+            {{courseNoteForm.details(class='form-control')}}
           </div>
           <div class="form-group">
-          {{form_field(form.attachments)}}
+          {{form_field(courseNoteForm.attachments)}}
           </div>
         
         
@@ -150,7 +150,7 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-      {{form.submit(class='btn btn-primary')}}</form>
+      {{courseNoteForm.submit(class='btn btn-primary')}}</form>
       </div>
     </div>
   </div>

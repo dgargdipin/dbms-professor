@@ -26,7 +26,7 @@ def serve_file(filename):
 @login_required
 def view_course(course_id):
     courseToRender=Course.query.filter_by(id=course_id).first()
-    form=addCourseNote()
+    courseNoteForm=addCourseNote()
         # id = db.Column(db.Integer, primary_key=True)
     # title = db.Column(db.String())
     # details = db.Column(db.String())
@@ -38,16 +38,16 @@ def view_course(course_id):
     # #     self.course_id=course_id
     # title = StringField('Note Title', validators=[DataRequired('Data required')])
     # details = StringField('Details', validators=[DataRequired('Data required')])
-    if form.validate_on_submit():
+    if courseNoteForm.validate_on_submit():
         attachments=[]
         if not current_user.is_authenticated:
             abort(405)
-        newCourseNote=courseNote(form.title.data,form.details.data,course_id=course_id)
+        newCourseNote=courseNote(courseNoteForm.title.data,courseNoteForm.details.data,course_id=course_id)
         db.session.add(newCourseNote)
         db.session.commit()
 
-        if form.attachments.data:
-            print(form.attachments.data,request.files)
+        if courseNoteForm.attachments.data:
+            print(courseNoteForm.attachments.data,request.files)
             for uploaded_file in request.files.getlist('attachments'):
 
                 filename, file_extension = os.path.splitext(uploaded_file.filename)
@@ -66,7 +66,7 @@ def view_course(course_id):
         db.session.add_all(attachments)
         db.session.commit()
         return redirect(url_for('course.view_course',course_id=course_id))
-    return render_template('view_course.html',course=courseToRender,form=form)
+    return render_template('view_course.html',course=courseToRender,courseNoteForm=courseNoteForm)
 
 
 
