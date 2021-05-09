@@ -26,6 +26,7 @@
 
 {% block content %}
     <a href="{{ url_for('course.add_question_to_quiz', course_id=course_id, quiz_id=quiz_id) }}" class="btn btn-primary">Add More Questions</a>
+    <a href="{{ url_for('course.display_attempts',quiz_id=quiz_id) }}" class="btn btn-primary">View responses</a>
     {% for question in questions %}
         {% set cur_count = loop.index - 1 %}
         <div class="container mt-5">
