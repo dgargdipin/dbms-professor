@@ -41,7 +41,7 @@
                         <h4 class="ml-4">Marks: {{ question.marks }}</h4>
                     </div>
                     {% for option in question.options %}
-                        {% if bool_values[cur_count][loop.index - 1] %}
+                        {% if option.is_right %}
                             <div class="ans ml-2">
                                 <p class="p-3 mb-2 bg-success text-white font-monospace text-decoration-none">{{ option.option }}</p>
                             </div>

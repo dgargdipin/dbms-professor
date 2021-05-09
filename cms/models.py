@@ -207,10 +207,11 @@ class Question(db.Model):
     quiz_id = db.Column(db.Integer, db.ForeignKey('quizzes.id'))
     question = db.Column(db.String(), nullable=False)
     options = db.relationship('Option', backref='question')
-    ans = db.Column(db.String(), nullable=False)
+    ans = db.Column(db.String(), nullable=False,default="")
     marks = db.Column(db.Integer, nullable=False, default=1)
     is_multicorrect = db.Column(db.Boolean, default=False)
     responses = db.relationship('quizQuestionResponse', backref='question')
+    is_partial = db.Column(db.Boolean, default=False)
 
 
 class Option(db.Model):

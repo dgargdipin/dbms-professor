@@ -304,31 +304,41 @@ def add_question_to_quiz(course_id: int, quiz_id: int):
     question_form = questionForm()
     if request.method == 'POST' and question_form.validate:
         question = Question(quiz_id=quiz_id, question=question_form.question.data, marks=question_form.marks.data,
-                            ans=question_form.ans.data, is_multicorrect=question_form.is_multi_correct.data)
+                            is_multicorrect=question_form.is_multi_correct.data,is_partial=question_form.is_partial.data)
         db.session.add(question)
         db.session.commit()
-        options_right = [False, False, False, False]
-        for a in question_form.ans.data:
+        numOptions=4
+        options_right = [False]*numOptions
+        print(options_right)
+        mList = [int(e) if e.isdigit()
+                 else e for e in question_form.ans.data.split(',')]
+
+        for a in mList:
+            if(a>numOptions):abort(405)
             print(a)
-            if a == '1':
-                options_right[0] = True
-            elif a == '2':
-                options_right[1] = True
-            elif a == '3':
-                options_right[2] = True
-            elif a == '4':
-                options_right[3] = True
-        option = Option(question_id=question.id, option=question_form.option1.data, is_right=options_right[0])
-        db.session.add(option)
-        db.session.commit()
-        option = Option(question_id=question.id, option=question_form.option2.data, is_right=options_right[1])
-        db.session.add(option)
-        db.session.commit()
-        option = Option(question_id=question.id, option=question_form.option3.data, is_right=options_right[2])
-        db.session.add(option)
-        db.session.commit()
-        option = Option(question_id=question.id, option=question_form.option4.data, is_right=options_right[3])
-        db.session.add(option)
+            options_right[a-1]=True
+        print(options_right)
+
+        options_arr=[]
+        for i in range(numOptions):
+            option = Option(question_id=question.id, option=getattr(
+                question_form, f"option{i+1}").data, is_right=options_right[i])
+            print(options_right[i])
+            options_arr.append(option)
+
+            db.session.add(option)
+            db.session.commit()
+            print(option.id,option.is_right)
+        # db.session.add_all(options_arr)
+        # db.session.commit()
+        idlist=[]
+        for option in options_arr:
+            if option.is_right:
+                print(option.option)
+                idlist.append(option.id)
+        
+        question.ans = ','.join(str(v) for v in idlist)
+        print(question.ans)
         db.session.commit()
         return redirect(url_for('course.display_quiz', course_id=course_id, quiz_id=quiz_id))
     return render_template('add_question.html', question_form=question_form)
