@@ -81,6 +81,7 @@ class Course(db.Model):
     assignments = db.relationship('Assignment', backref='course',order_by="desc(Assignment.time)")
     quizzes = db.relationship('Quiz', backref='course', order_by="desc(Quiz.start_time)")
     requests = db.relationship('Request', backref='course')
+    discussion_thread=db.relationship('DiscussionThread',backref='course',uselist=False)
 
     def __init__(self, name, course_code, details, prof_id,can_apply=True):
         self.name = name
@@ -146,7 +147,7 @@ class Attachment(db.Model):
     submission_id = db.Column(db.Integer, db.ForeignKey('submission.id'))
     request_id = db.Column(db.Integer, db.ForeignKey('request.id'))
     discussionpost_id = db.Column(db.Integer, db.ForeignKey('discussionposts.id'))
-    def __init__(self,name,ext,link,coursenote_id=None,assignment_id=None,submission_id=None,request_id=None):
+    def __init__(self,name,ext,link,coursenote_id=None,assignment_id=None,submission_id=None,request_id=None,discussionpost_id=None):
         self.name=name
         self.ext=ext
         self.link=link
@@ -154,6 +155,7 @@ class Attachment(db.Model):
         self.assignment_id=assignment_id
         self.submission_id=submission_id
         self.request_id=request_id
+        self.discussionpost_id=discussionpost_id
 
 
 class Submission(db.Model):
@@ -257,6 +259,8 @@ class quizQuestionResponse(db.Model):
                         ','), self.response)
                     if resp_id_string in self.question.ans.split(','):
                         ans += 1
+                    else:
+                        return 0
                 return ans*self.question.marks/len(self.question.ans.split(','))
             else:
                 return 0
@@ -288,7 +292,7 @@ class DiscussionThread(db.Model):
     course_id = db.Column(db.Integer, db.ForeignKey('courses.id'))
     title = db.Column(db.String())
     details = db.Column(db.String())
-    posts = db.relationship('DiscussionPost', backref='quiz_response')
+    posts = db.relationship('DiscussionPost', backref='discussionThread')
 
 
 class DiscussionPost(db.Model):
@@ -299,4 +303,5 @@ class DiscussionPost(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     title = db.Column(db.String())
     details = db.Column(db.String())
+    timeofpost = db.Column(db.DateTime, nullable= False, default= datetime.now)
     attachments = db.relationship('Attachment', backref='post')

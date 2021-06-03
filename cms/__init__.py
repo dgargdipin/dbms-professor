@@ -4,11 +4,19 @@ import os
 from flask_login import LoginManager
 app =Flask(__name__)
 app.config['SECRET_KEY']='mysecret'
+app.config.update(SESSION_COOKIE_NAME='app_professor')
+
 basedir=os.path.abspath(os.path.dirname(__file__))
 print(basedir)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + \
     os.path.join(basedir, '..', '..', 'data.sqlite')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS']=False
+if os.getenv('testing')=='true':
+    print("TESTING MODE")
+    app.config['WTF_CSRF_ENABLED']=False
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + \
+    os.path.join(basedir, '..', '..', 'data_test.sqlite')
+
 db=SQLAlchemy(app)
 
 

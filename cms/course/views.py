@@ -7,8 +7,8 @@ from flask import render_template, url_for, flash, redirect, request, Blueprint,
 from flask_login import login_user, current_user, logout_user, login_required
 from flask_wtf import file
 from cms import basedir,ALLOWED_EXT,db
-from cms.models import Course, QuizResponse, Request, User,courseNote,Attachment,Assignment, Quiz, Question, Option
-from .forms import addCourseNote,assignmentForm, quizForm, questionForm
+from cms.models import Course, QuizResponse, Request, User,courseNote,Attachment,Assignment, Quiz, Question, Option, DiscussionThread, DiscussionPost, Professor
+from .forms import addCourseNote,assignmentForm, quizForm, questionForm, postForm
 
 from datetime import datetime
 from werkzeug.utils import secure_filename
@@ -123,6 +123,51 @@ def view_course(course_id):
 @login_required
 def remove(course_id):
     courseToDrop = Course.query.filter_by(id=course_id).first()
+    for courseNote in courseToDrop.courseNotes:
+        course_id=courseNote.course.id
+        if(current_user!=courseNote.course.professor):
+            flash('Not authenticated')
+            abort(405)
+        cnd=courseNote
+        if cnd.attachments:
+            for attachment in cnd.attachments:
+                try:
+                    file_path = os.path.join(
+                        basedir, "..", "..", "static_material", os.path.basename(attachment.link))
+                    if os.path.isfile(file_path):
+                        os.remove(file_path)
+                    db.session.delete(attachment)
+                except Exception as e:
+                    print(e)
+                    
+        db.session.delete(cnd)
+        db.session.commit()
+    for assignment in courseToDrop.assignments:
+        course_id=assignment.course.id
+        if(current_user!=assignment.course.professor):
+            flash('Not authenticated')
+            abort(405)
+        cnd=assignment
+        if cnd.attachments:
+            for attachment in cnd.attachments:
+                file_path = os.path.join(basedir, "..", "..", "static_material", os.path.basename(attachment.link))
+                if os.path.isfile(file_path):
+                    os.remove(file_path)
+                db.session.delete(attachment)
+        if cnd.submissions:
+            for submission in cnd.submissions:
+                if submission.attachments:
+                    for attachment in submission.attachments:
+                        file_path = os.path.join(
+                            basedir, "..", "..", "static_material", os.path.basename(attachment.link))
+                        if os.path.isfile(file_path):
+                            os.remove(file_path)
+                        db.session.delete(attachment)
+                    db.session.delete(submission)
+
+        db.session.delete(cnd)
+        db.session.commit()
+
     db.session.delete(courseToDrop)
     db.session.commit()
     return redirect(url_for('core.index'))
@@ -291,7 +336,7 @@ def display_quiz(course_id: int, quiz_id: int):
             elif a == '4':
                 cur_bool_values[3] = True
         bool_values.append(cur_bool_values)
-    return render_template('display_quiz.html', questions=quiz.questions, course_id=course_id, quiz_id=quiz_id,
+    return render_template('display_quiz.html', quiz=quiz, course_id=course_id, quiz_id=quiz_id,
                            bool_values=bool_values)
 
 
@@ -369,3 +414,69 @@ def display_attempts(quiz_id):
     #    bool_values=bool_values)
 
 
+@cb.route('/course/<course_id>/discussion_forum', methods=['GET', 'POST'])
+@login_required
+def discussion_forum(course_id: int):
+    
+    course = Course.query.filter_by(id=course_id).first()
+    if not course:
+        abort(405)
+    discussion_forum = DiscussionThread.query.filter_by(course_id= course_id).first()
+    # if discussion_forum and discussion_forum.course_id != current_user:
+    #     abort(405)
+    if not discussion_forum:
+        new_discussion = DiscussionThread(course_id= course_id, title= course.name, details= course.details)
+        db.session.add(new_discussion)
+        db.session.commit()
+    discussion_forum = DiscussionThread.query.filter_by(course_id= course_id).first()
+    print("discussion_forum", discussion_forum)
+    Posts = DiscussionPost.query.filter_by(discussion_id= discussion_forum.id)
+    print("Posts is- ", Posts)
+    Names = {}
+    for post in Posts:
+        temp_user = User.query.filter_by(id= post.user_id).first()
+        if not temp_user:
+            temp_user = Professor.query.filter_by(id= (post.user_id)/100).first()
+        Names[post.user_id] = temp_user.name
+
+    addpostForm= postForm()
+    if request.method == 'POST':
+        if request.form.get("content"):
+            content = request.form.get("content")
+            user_id = current_user.id*100
+            new_post = DiscussionPost(user_id= user_id, discussion_id= discussion_forum.id, details= content)
+            print("user_id= ",user_id)
+            db.session.add(new_post)
+            db.session.commit() 
+        # return render_template('discussion_forum.html', Posts= Posts, course_id=course_id,Names= Names)
+        if addpostForm.submit.data and addpostForm.validate:
+            attachments=[]
+            if not current_user.is_authenticated:
+                abort(405)
+            user_id = current_user.id*100
+            new_post=DiscussionPost(details=addpostForm.details.data, user_id= user_id, discussion_id= discussion_forum.id)
+            db.session.add(new_post)
+            db.session.commit()
+
+            if addpostForm.attachments.data:
+                for uploaded_file in request.files.getlist('attachments'):
+
+                    filename, file_extension = os.path.splitext(uploaded_file.filename)
+                    if not filename or not file_extension:
+                        continue
+                    savename = secure_filename(filename)+''.join(
+                        random.choice(string.ascii_lowercase) for i in range(16))+file_extension
+                    print(filename,savename)
+                    if savename=="":
+                        break
+                    
+                    uploaded_file.save(os.path.join(basedir, '..', '..', 'static_material', savename))
+                    new_attachment = Attachment(
+                        filename, file_extension,url_for('course.serve_file',filename=savename),discussionpost_id=new_post.id)
+                    attachments.append(new_attachment)
+            print(attachments)
+            db.session.add_all(attachments)
+            db.session.commit()
+        return redirect(url_for('course.discussion_forum', course_id=course_id))
+
+    return render_template('discussion_forum.html', forum=discussion_forum, course_id=course_id,Names= Names, addAttachmentForm= addpostForm)
